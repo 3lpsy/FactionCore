@@ -1,0 +1,2 @@
+Setup RabbitMQ as a proper IHostedService
+https://docs.microsoft.com/en-us/dotnet/standard/microservices-architecture/multi-container-microservice-net-applications/background-tasks-with-ihostedservice

@@ -1,0 +1,43 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+using Faction.Common.Backend.Database;
+using Faction.Common.Backend.EventBus;
+using Faction.Common.Backend.EventBus.Abstractions;
+using Faction.Common.Models;
+using Faction.Common.Messages;
+
+namespace Faction.Core.Handlers
+{
+  public class UpdateTransportEventHandler : IEventHandler<UpdateTransport>
+  {
+    private readonly IEventBus _eventBus;
+    private static FactionRepository _taskRepository;
+
+    public UpdateTransportEventHandler(IEventBus eventBus, FactionRepository taskRepository)
+    {
+      _eventBus = eventBus; // Inject the EventBus into this Handler to Publish a message, insert AppDbContext here for DB Access
+      _taskRepository = taskRepository;
+    }
+
+    public async Task Handle(UpdateTransport updateTransport, string replyTo, string correlationId)
+    {
+      Console.WriteLine($"[i] Updating Transport..");
+      Transport transport = _taskRepository.GetTransport(updateTransport.Id);
+      transport.Description = updateTransport.Description;
+      transport.Name = updateTransport.Name;
+      transport.Visible = updateTransport.Visible;
+      transport.Enabled = updateTransport.Enabled;
+      transport.Configuration = updateTransport.Configuration;
+      transport = _taskRepository.Update(transport.Id, transport);
+
+      TransportUpdated transportUpdated = new TransportUpdated();
+      transportUpdated.Success = true;
+      transportUpdated.Transport = transport;
+      _eventBus.Publish(transportUpdated, replyTo, correlationId);
+    }
+  }
+}
