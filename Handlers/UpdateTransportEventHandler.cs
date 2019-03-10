@@ -32,6 +32,7 @@ namespace Faction.Core.Handlers
       transport.Visible = updateTransport.Visible;
       transport.Enabled = updateTransport.Enabled;
       transport.Configuration = updateTransport.Configuration;
+      transport.Guid = updateTransport.Guid;
       transport = _taskRepository.Update(transport.Id, transport);
 
       TransportUpdated transportUpdated = new TransportUpdated();
