@@ -7,29 +7,35 @@ using Newtonsoft.Json;
 using Faction.Common;
 using Faction.Common.Backend.Database;
 using Faction.Common.Backend.EventBus.Abstractions;
+using Faction.Common.Messages;
 using Faction.Common.Models;
 
 using Faction.Core.Objects;
 
 namespace Faction.Core.Handlers
 {
-  public class StagingMessageEventHandler : IEventHandler<StagingMessage>
+  public class NewStagingMessageEventHandler : IEventHandler<NewStagingMessage>
   {
     private readonly IEventBus _eventBus;
     private static FactionRepository _taskRepository;
 
-    public StagingMessageEventHandler(IEventBus eventBus, FactionRepository taskRepository)
+    public NewStagingMessageEventHandler(IEventBus eventBus, FactionRepository taskRepository)
     {
       _eventBus = eventBus; // Inject the EventBus into this Handler to Publish a message, insert AppDbContext here for DB Access
       _taskRepository = taskRepository;
     }
 
-    public async Task Handle(StagingMessage stagingMessage, string replyTo, string correlationId)
+    public async Task Handle(NewStagingMessage newStagingMessage, string replyTo, string correlationId)
     {
       Console.WriteLine($"[i] Got StagingMessage Message.");
+      StagingMessage stagingMessage = new StagingMessage();
       // Decode and Decrypt AgentTaskResponse
-      stagingMessage.Payload = _taskRepository.GetPayload(stagingMessage.PayloadName);
-      stagingMessage.Received = DateTime.UtcNow;
+      stagingMessage.HMAC = newStagingMessage.HMAC;
+      stagingMessage.IV = newStagingMessage.IV;
+      stagingMessage.Message = newStagingMessage.Message;
+      stagingMessage.PayloadName = newStagingMessage.PayloadName;
+      stagingMessage.Payload = _taskRepository.GetPayload(newStagingMessage.PayloadName);
+      stagingMessage.PayloadId = stagingMessage.Payload.Id;
       _taskRepository.Add(stagingMessage);
     
       // Decrypt Message from Agent

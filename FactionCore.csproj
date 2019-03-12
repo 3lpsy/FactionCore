@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="3.1.0" />
-    <PackageReference Include="Faction.Common" Version="20190310.0.0" />
+    <!-- <PackageReference Include="Faction.Common" Version="20190310.0.0" /> -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.2.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0" />
@@ -19,5 +19,8 @@
     <PackageReference Include="RabbitMQ" Version="3.6.2" />
     <PackageReference Include="RabbitMQ.Client" Version="5.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+    <Reference Include="Faction.Common">
+      <HintPath>.\lib\Faction.Common.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

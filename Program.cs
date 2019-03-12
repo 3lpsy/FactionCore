@@ -117,7 +117,7 @@ namespace Faction.Core
       services.AddTransient<NewConsoleMessageEventHandler>();
       services.AddTransient<NewErrorMessageEventHandler>();
       services.AddTransient<NewTransportEventHandler>();
-      services.AddTransient<StagingMessageEventHandler>();
+      services.AddTransient<NewStagingMessageEventHandler>();
       services.AddTransient<UpdateAgentEventHandler>();
       services.AddTransient<UpdateTransportEventHandler>();
     }
@@ -131,7 +131,7 @@ namespace Faction.Core
       eventBus.Subscribe<NewConsoleMessage, NewConsoleMessageEventHandler>();
       eventBus.Subscribe<NewErrorMessage, NewErrorMessageEventHandler>();
       eventBus.Subscribe<NewTransport, NewTransportEventHandler>();
-      eventBus.Subscribe<StagingMessage, StagingMessageEventHandler>();
+      eventBus.Subscribe<NewStagingMessage, NewStagingMessageEventHandler>();
       eventBus.Subscribe<UpdateAgent, UpdateAgentEventHandler>();
       eventBus.Subscribe<UpdateTransport, UpdateTransportEventHandler>();
     }
