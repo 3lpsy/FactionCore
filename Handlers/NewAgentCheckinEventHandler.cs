@@ -37,6 +37,13 @@ namespace Faction.Core.Handlers
       // Check in agent
       Agent agent = _taskRepository.GetAgent(agentCheckingMsg.AgentName);
       agent.LastCheckin = DateTime.UtcNow;
+      if (!agent.Visible) {
+        agent.Visible = true;
+        AgentUpdated update = new AgentUpdated();
+        update.Success = true;
+        update.Agent = agent;
+        _eventBus.Publish(update);
+      }
       _taskRepository.Update(agent.Id, agent);
 
       AgentCheckinAnnouncement agentCheckinAnnouncement = new AgentCheckinAnnouncement();

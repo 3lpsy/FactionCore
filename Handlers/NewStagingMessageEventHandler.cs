@@ -28,106 +28,112 @@ namespace Faction.Core.Handlers
     public async Task Handle(NewStagingMessage newStagingMessage, string replyTo, string correlationId)
     {
       Console.WriteLine($"[i] Got StagingMessage Message.");
-      StagingMessage stagingMessage = new StagingMessage();
-      // Decode and Decrypt AgentTaskResponse
-      stagingMessage.HMAC = newStagingMessage.HMAC;
-      stagingMessage.IV = newStagingMessage.IV;
-      stagingMessage.Message = newStagingMessage.Message;
-      stagingMessage.PayloadName = newStagingMessage.PayloadName;
-      stagingMessage.Payload = _taskRepository.GetPayload(newStagingMessage.PayloadName);
-      stagingMessage.PayloadId = stagingMessage.Payload.Id;
-      _taskRepository.Add(stagingMessage);
-    
-      // Decrypt Message from Agent
-      string decryptedMessage = Crypto.Decrypt(stagingMessage);
-      Console.WriteLine($"Got response {decryptedMessage}");
-      
-      // Process taskResults
-      // TODO: Probably a better way to check if the message is blank.
-      if ((decryptedMessage != "[]") || (!String.IsNullOrEmpty(decryptedMessage))) {
-        Agent agent = JsonConvert.DeserializeObject<Agent>(decryptedMessage);
-        agent.Name = Utility.GenerateSecureString(12);
-        agent.AesPassword = Utility.GenerateSecureString(32);
-        agent.InitialCheckin = DateTime.UtcNow;
-        agent.LastCheckin = DateTime.UtcNow;
-        agent.BeaconInterval = stagingMessage.Payload.BeaconInterval;
-        agent.Jitter = stagingMessage.Payload.Jitter;
-        agent.AgentType = _taskRepository.GetAgentType(stagingMessage.Payload.AgentTypeId);
-        agent.AgentTypeId = stagingMessage.Payload.AgentType.Id;
-        agent.Payload = stagingMessage.Payload;
+      Payload payload = _taskRepository.GetPayload(newStagingMessage.PayloadName);
+      if (payload.Enabled)
+      {
+        StagingMessage stagingMessage = new StagingMessage();
+        // Decode and Decrypt AgentTaskResponse
+        stagingMessage.HMAC = newStagingMessage.HMAC;
+        stagingMessage.IV = newStagingMessage.IV;
+        stagingMessage.Message = newStagingMessage.Message;
+        stagingMessage.PayloadName = newStagingMessage.PayloadName;
+        stagingMessage.Payload = payload;
+        stagingMessage.PayloadId = stagingMessage.Payload.Id;
+        _taskRepository.Add(stagingMessage);
 
-        _taskRepository.Add(agent);
-        _eventBus.Publish(agent);
+        // Decrypt Message from Agent
+        string decryptedMessage = Crypto.Decrypt(stagingMessage);
+        Console.WriteLine($"Got response {decryptedMessage}");
+        
+        // Process taskResults
+        // TODO: Probably a better way to check if the message is blank.
+        if ((decryptedMessage != "[]") || (!String.IsNullOrEmpty(decryptedMessage))) {
+          Agent agent = JsonConvert.DeserializeObject<Agent>(decryptedMessage);
+          agent.Name = Utility.GenerateSecureString(12);
+          agent.AesPassword = Utility.GenerateSecureString(32);
+          agent.InitialCheckin = DateTime.UtcNow;
+          agent.LastCheckin = DateTime.UtcNow;
+          agent.BeaconInterval = stagingMessage.Payload.BeaconInterval;
+          agent.Jitter = stagingMessage.Payload.Jitter;
+          agent.AgentType = _taskRepository.GetAgentType(stagingMessage.Payload.AgentTypeId);
+          agent.AgentTypeId = stagingMessage.Payload.AgentType.Id;
+          agent.Payload = stagingMessage.Payload;
 
-        // Create Agent tasks to setup agent
-        List<OutboundTask> stagingTasks = new List<OutboundTask>();
+          _taskRepository.Add(agent);
+          _eventBus.Publish(agent);
 
-        AgentTask agentNameTask = new AgentTask();
-        agentNameTask.AgentId = agent.Id;
-        agentNameTask.Action = "SET";
-        agentNameTask.Command = $"Name:{agent.Name}";
-        _taskRepository.Add(agentNameTask);
-        stagingTasks.Add(new OutboundTask(agent.Name, agentNameTask));
+          // Create Agent tasks to setup agent
+          List<OutboundTask> stagingTasks = new List<OutboundTask>();
 
-        AgentTask passwordTask = new AgentTask();
-        passwordTask.AgentId = agent.Id;
-        passwordTask.Action = "SET";
-        passwordTask.Command = $"Password:{agent.AesPassword}";
-        _taskRepository.Add(passwordTask);
-        stagingTasks.Add(new OutboundTask(agent.Name, passwordTask));
+          AgentTask agentNameTask = new AgentTask();
+          agentNameTask.AgentId = agent.Id;
+          agentNameTask.Action = "SET";
+          agentNameTask.Command = $"Name:{agent.Name}";
+          _taskRepository.Add(agentNameTask);
+          stagingTasks.Add(new OutboundTask(agent.Name, agentNameTask));
 
-        AgentTask beaconTask = new AgentTask();
-        beaconTask.AgentId = agent.Id;
-        beaconTask.Action = "SET";
-        beaconTask.Command = $"BeaconInterval:{agent.BeaconInterval.ToString()}";
-        _taskRepository.Add(beaconTask);
-        stagingTasks.Add(new OutboundTask(agent.Name, beaconTask));
+          AgentTask passwordTask = new AgentTask();
+          passwordTask.AgentId = agent.Id;
+          passwordTask.Action = "SET";
+          passwordTask.Command = $"Password:{agent.AesPassword}";
+          _taskRepository.Add(passwordTask);
+          stagingTasks.Add(new OutboundTask(agent.Name, passwordTask));
 
-        AgentTask jitterTask = new AgentTask();
-        jitterTask.AgentId = agent.Id;
-        jitterTask.Action = "SET";
-        jitterTask.Command = $"Jitter:{agent.Jitter.ToString()}";
-        _taskRepository.Add(jitterTask);
-        stagingTasks.Add(new OutboundTask(agent.Name, jitterTask));
+          AgentTask beaconTask = new AgentTask();
+          beaconTask.AgentId = agent.Id;
+          beaconTask.Action = "SET";
+          beaconTask.Command = $"BeaconInterval:{agent.BeaconInterval.ToString()}";
+          _taskRepository.Add(beaconTask);
+          stagingTasks.Add(new OutboundTask(agent.Name, beaconTask));
 
-        AgentTask payloadNameTask = new AgentTask();
-        payloadNameTask.AgentId = agent.Id;
-        payloadNameTask.Action = "SET";
-        payloadNameTask.Command = $"PayloadName:null";
-        _taskRepository.Add(payloadNameTask);
-        stagingTasks.Add(new OutboundTask(agent.Name, payloadNameTask));
+          AgentTask jitterTask = new AgentTask();
+          jitterTask.AgentId = agent.Id;
+          jitterTask.Action = "SET";
+          jitterTask.Command = $"Jitter:{agent.Jitter.ToString()}";
+          _taskRepository.Add(jitterTask);
+          stagingTasks.Add(new OutboundTask(agent.Name, jitterTask));
 
-        AgentTask stagerIdTask = new AgentTask();
-        stagerIdTask.AgentId = agent.Id;
-        stagerIdTask.Action = "SET";
-        stagerIdTask.Command = $"StagingId:null";
-        _taskRepository.Add(stagerIdTask);
-        stagingTasks.Add(new OutboundTask(agent.Name, stagerIdTask));
+          AgentTask payloadNameTask = new AgentTask();
+          payloadNameTask.AgentId = agent.Id;
+          payloadNameTask.Action = "SET";
+          payloadNameTask.Command = $"PayloadName:null";
+          _taskRepository.Add(payloadNameTask);
+          stagingTasks.Add(new OutboundTask(agent.Name, payloadNameTask));
 
-        // Convert outbound message to json and encrypt with the staging message password
-        string jsonOutboundMessage = JsonConvert.SerializeObject(stagingTasks);
-        Dictionary<string, string> encCommand = Crypto.Encrypt(jsonOutboundMessage, agent.Id, stagingMessage.Payload.Key);
+          AgentTask stagerIdTask = new AgentTask();
+          stagerIdTask.AgentId = agent.Id;
+          stagerIdTask.Action = "SET";
+          stagerIdTask.Command = $"StagingId:null";
+          _taskRepository.Add(stagerIdTask);
+          stagingTasks.Add(new OutboundTask(agent.Name, stagerIdTask));
 
-        // Create a StagingResponse object with the seralized/encrypted message contents
-        StagingResponse stagingResponse = new StagingResponse();
-        stagingResponse.Agent = agent;
-        stagingResponse.Message = encCommand["encryptedMsg"];
-        stagingResponse.AgentId = agent.Id;
-        stagingResponse.HMAC = encCommand["hmac"];
-        stagingResponse.IV = encCommand["iv"];
-        stagingResponse.Sent = false;
+          // Convert outbound message to json and encrypt with the staging message password
+          string jsonOutboundMessage = JsonConvert.SerializeObject(stagingTasks);
+          Dictionary<string, string> encCommand = Crypto.Encrypt(jsonOutboundMessage, agent.Id, stagingMessage.Payload.Key);
 
-        _taskRepository.Add(stagingResponse);
+          // Create a StagingResponse object with the seralized/encrypted message contents
+          StagingResponse stagingResponse = new StagingResponse();
+          stagingResponse.Agent = agent;
+          stagingResponse.Message = encCommand["encryptedMsg"];
+          stagingResponse.AgentId = agent.Id;
+          stagingResponse.HMAC = encCommand["hmac"];
+          stagingResponse.IV = encCommand["iv"];
+          stagingResponse.Sent = false;
 
-        // Package for delivery
-        string stagingJson = JsonConvert.SerializeObject(new OutboundStagingResponse(stagingResponse));
-        string encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(stagingJson));
-        Dictionary<string, string> outboundMessage = new Dictionary<string, string>();
-        outboundMessage["AgentName"] = agent.StagingId;
-        outboundMessage["Message"] = encodedMessage;
-        _eventBus.Publish(outboundMessage, replyTo, correlationId);
-      }
-    }
+          _taskRepository.Add(stagingResponse);
 
+          // Package for delivery
+          string stagingJson = JsonConvert.SerializeObject(new OutboundStagingResponse(stagingResponse));
+          string encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(stagingJson));
+          Dictionary<string, string> outboundMessage = new Dictionary<string, string>();
+          outboundMessage["AgentName"] = agent.StagingId;
+          outboundMessage["Message"] = encodedMessage;
+          _eventBus.Publish(outboundMessage, replyTo, correlationId);
+        }
+        else {
+          Console.WriteLine($"[i] Payload is disabled. Staging message ignored.");
+        }
+      }    
     }
   }
+}

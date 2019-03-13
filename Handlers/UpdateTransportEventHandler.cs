@@ -33,6 +33,21 @@ namespace Faction.Core.Handlers
       transport.Enabled = updateTransport.Enabled;
       transport.Configuration = updateTransport.Configuration;
       transport.Guid = updateTransport.Guid;
+      if (!transport.Visible) {
+        transport.Enabled = false;
+      }
+
+      ApiKey apiKey = _taskRepository.GetApiKey(transport.ApiKeyId.Value);
+
+      if (!transport.Enabled) {
+        apiKey.Enabled = false;
+        _taskRepository.Update(apiKey.Id, apiKey);
+      }
+      else if (!apiKey.Enabled) {
+        apiKey.Enabled = true;
+        _taskRepository.Update(apiKey.Id, apiKey);
+      }
+      
       transport = _taskRepository.Update(transport.Id, transport);
 
       TransportUpdated transportUpdated = new TransportUpdated();
