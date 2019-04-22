@@ -37,6 +37,8 @@ namespace Faction.Core.Handlers
         stagingMessage.IV = newStagingMessage.IV;
         stagingMessage.Message = newStagingMessage.Message;
         stagingMessage.PayloadName = newStagingMessage.PayloadName;
+        stagingMessage.TransportId = newStagingMessage.TransportId;
+        stagingMessage.SourceIp = newStagingMessage.SourceIp;
         stagingMessage.Payload = payload;
         stagingMessage.PayloadId = stagingMessage.Payload.Id;
         _taskRepository.Add(stagingMessage);
@@ -54,6 +56,8 @@ namespace Faction.Core.Handlers
           agent.InitialCheckin = DateTime.UtcNow;
           agent.LastCheckin = DateTime.UtcNow;
           agent.BeaconInterval = stagingMessage.Payload.BeaconInterval;
+          agent.ExternalIp = stagingMessage.SourceIp;
+          agent.TransportId = stagingMessage.TransportId;
           agent.Jitter = stagingMessage.Payload.Jitter;
           agent.AgentType = _taskRepository.GetAgentType(stagingMessage.Payload.AgentTypeId);
           agent.AgentTypeId = stagingMessage.Payload.AgentType.Id;

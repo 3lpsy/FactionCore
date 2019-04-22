@@ -35,20 +35,13 @@ namespace Faction.Core.Handlers
     {
       Console.WriteLine($"[i] Got AgentCheckin Message.");
 
-       // Default to DIRECT Transport
-      string transportName = "DIRECT";
-      int transportId = 1;
 
-      // Update Transport info if we can
-      if (agentCheckinMsg.TransportId.HasValue) {
-        Transport transport = _taskRepository.GetTransport(agentCheckinMsg.TransportId.Value);
-        transportId = agentCheckinMsg.TransportId.Value;
-        transportName = transport.Name;
-      }
+      Transport transport = _taskRepository.GetTransport(agentCheckinMsg.TransportId);
+
 
       // Check in agent
       Agent agent = _taskRepository.GetAgent(agentCheckinMsg.AgentName);
-      agent.TransportId = transportId;
+      agent.TransportId = agentCheckinMsg.TransportId;
       agent.ExternalIp = agentCheckinMsg.SourceIp;
       agent.LastCheckin = DateTime.UtcNow;
 
@@ -64,8 +57,8 @@ namespace Faction.Core.Handlers
       AgentCheckinAnnouncement agentCheckinAnnouncement = new AgentCheckinAnnouncement();
       agentCheckinAnnouncement.Id = agent.Id;
       agentCheckinAnnouncement.SourceIp = agentCheckinMsg.SourceIp;
-      agentCheckinAnnouncement.TransportId = transportId;
-      agentCheckinAnnouncement.TransportName = transportName;
+      agentCheckinAnnouncement.TransportId = agentCheckinMsg.TransportId;
+      agentCheckinAnnouncement.TransportName = transport.Name;
       agentCheckinAnnouncement.Received = agent.LastCheckin.Value;
       _eventBus.Publish(agentCheckinAnnouncement);
 
@@ -74,7 +67,7 @@ namespace Faction.Core.Handlers
       {
         AgentCheckin agentCheckin = new AgentCheckin();
         agentCheckin.SourceIp = agentCheckinMsg.SourceIp;
-        agentCheckin.TransportId = transportId;
+        agentCheckin.TransportId = agentCheckinMsg.TransportId;
         agentCheckin.HMAC = agentCheckinMsg.HMAC;
         agentCheckin.IV = agentCheckinMsg.IV;
         agentCheckin.Message = agentCheckinMsg.Message;
