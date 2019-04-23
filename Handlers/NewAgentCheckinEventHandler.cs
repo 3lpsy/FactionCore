@@ -31,12 +31,20 @@ namespace Faction.Core.Handlers
       _taskRepository = taskRepository;
     }
 
-    public async Task Handle(NewAgentCheckin agentCheckingMsg, string replyTo, string correlationId)
+    public async Task Handle(NewAgentCheckin agentCheckinMsg, string replyTo, string correlationId)
     {
       Console.WriteLine($"[i] Got AgentCheckin Message.");
+
+
+      Transport transport = _taskRepository.GetTransport(agentCheckinMsg.TransportId);
+
+
       // Check in agent
-      Agent agent = _taskRepository.GetAgent(agentCheckingMsg.AgentName);
+      Agent agent = _taskRepository.GetAgent(agentCheckinMsg.AgentName);
+      agent.TransportId = agentCheckinMsg.TransportId;
+      agent.ExternalIp = agentCheckinMsg.SourceIp;
       agent.LastCheckin = DateTime.UtcNow;
+
       if (!agent.Visible) {
         agent.Visible = true;
         AgentUpdated update = new AgentUpdated();
@@ -48,16 +56,21 @@ namespace Faction.Core.Handlers
 
       AgentCheckinAnnouncement agentCheckinAnnouncement = new AgentCheckinAnnouncement();
       agentCheckinAnnouncement.Id = agent.Id;
+      agentCheckinAnnouncement.SourceIp = agentCheckinMsg.SourceIp;
+      agentCheckinAnnouncement.TransportId = agentCheckinMsg.TransportId;
+      agentCheckinAnnouncement.TransportName = transport.Name;
       agentCheckinAnnouncement.Received = agent.LastCheckin.Value;
       _eventBus.Publish(agentCheckinAnnouncement);
 
       // Decode and Decrypt AgentTaskResponse
-      if (!String.IsNullOrEmpty(agentCheckingMsg.Message)) 
+      if (!String.IsNullOrEmpty(agentCheckinMsg.Message)) 
       {
         AgentCheckin agentCheckin = new AgentCheckin();
-        agentCheckin.HMAC = agentCheckingMsg.HMAC;
-        agentCheckin.IV = agentCheckingMsg.IV;
-        agentCheckin.Message = agentCheckingMsg.Message;
+        agentCheckin.SourceIp = agentCheckinMsg.SourceIp;
+        agentCheckin.TransportId = agentCheckinMsg.TransportId;
+        agentCheckin.HMAC = agentCheckinMsg.HMAC;
+        agentCheckin.IV = agentCheckinMsg.IV;
+        agentCheckin.Message = agentCheckinMsg.Message;
         agentCheckin.AgentId = agent.Id;
         agentCheckin.Agent = agent;
         _taskRepository.Add(agentCheckin);

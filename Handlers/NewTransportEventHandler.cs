@@ -27,7 +27,7 @@ namespace Faction.Core.Handlers
     {
       Console.WriteLine($"[i] Got Transport Message.");
       Transport transport = new Transport();
-      transport.Description = newTransport.Description;
+      transport.Name = newTransport.Name;
       transport.ApiKeyId = newTransport.ApiKeyId;
       _taskRepository.Add(transport);
       TransportCreated transportCreated = new TransportCreated();

@@ -27,8 +27,8 @@ namespace Faction.Core.Handlers
     {
       Console.WriteLine($"[i] Updating Transport..");
       Transport transport = _taskRepository.GetTransport(updateTransport.Id);
-      transport.Description = updateTransport.Description;
       transport.Name = updateTransport.Name;
+      transport.TransportType = updateTransport.TransportType;
       transport.Visible = updateTransport.Visible;
       transport.Enabled = updateTransport.Enabled;
       transport.Configuration = updateTransport.Configuration;
