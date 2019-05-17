@@ -60,11 +60,15 @@ namespace Faction.Core.Handlers
           agent.TransportId = stagingMessage.TransportId;
           agent.Jitter = stagingMessage.Payload.Jitter;
           agent.AgentType = _taskRepository.GetAgentType(stagingMessage.Payload.AgentTypeId);
+          agent.AgentType.Language = _taskRepository.GetLanguage(agent.AgentType.LanguageId);
           agent.AgentTypeId = stagingMessage.Payload.AgentType.Id;
+          agent.Transport = _taskRepository.GetTransport(stagingMessage.TransportId);
           agent.Payload = stagingMessage.Payload;
 
           _taskRepository.Add(agent);
-          _eventBus.Publish(agent);
+
+          NewAgent newAgent = new NewAgent(agent);
+          _eventBus.Publish(newAgent);
 
           // Create Agent tasks to setup agent
           List<OutboundTask> stagingTasks = new List<OutboundTask>();
