@@ -494,11 +494,24 @@ namespace Faction.Core.Handlers
             msg.Language = (_taskRepository.GetLanguage(consoleMessage.Agent.AgentType.LanguageId)).Name;
             msg.Name = consoleMessageComponents[1];
           }
-          _eventBus.Publish(msg, null, null, true);
 
-          string message = _eventBus.ResponseQueue.Take();
-          ModuleResponse moduleResponse = JsonConvert.DeserializeObject<ModuleResponse>(message);
-          outboundMessage.Add("Command", moduleResponse.Contents);
+          bool LoadSuccess = false;
+          foreach (Module module in AgentDetails.AvailableModules) {
+            if (module.Name.ToLower() == msg.Name.ToLower()) {
+              _eventBus.Publish(msg, null, null, true);   
+              string message = _eventBus.ResponseQueue.Take();
+              ModuleResponse moduleResponse = JsonConvert.DeserializeObject<ModuleResponse>(message);
+              outboundMessage.Add("Command", moduleResponse.Contents);
+              LoadSuccess = true;
+              break;
+            }
+          }
+
+          if (!LoadSuccess) {
+            error = true;
+            errorMessage = $"Module {msg.Name} is not a valid module. Use the 'show modules' command to view available modules";
+          }
+
         }
 
         // Message formats
@@ -527,14 +540,6 @@ namespace Faction.Core.Handlers
           outboundMessage.Add("Command", command);
         }
 
-        // update agentTask with final command format and save it
-        agentTask.Command = outboundMessage["Command"];
-        _taskRepository.Add(agentTask);
-
-        // update the incoming consoleMessage with this task Id
-        consoleMessage.AgentTaskId = agentTask.Id;
-        _taskRepository.Update(consoleMessage.Id, consoleMessage);
-
         // If there's an error, send it back
         if (error)
         {
@@ -543,7 +548,7 @@ namespace Faction.Core.Handlers
           message.AgentTaskId = agentTask.Id;
           message.UserId = 1;
           message.Type = "AgentTaskError";
-          message.Content = errorMessage;
+          message.Display = errorMessage;
           _taskRepository.Add(message);
 
           ConsoleMessageAnnouncement response = new ConsoleMessageAnnouncement();
@@ -555,6 +560,14 @@ namespace Faction.Core.Handlers
         // Else, create a new task for the agent
         else
         {
+          // update agentTask with final command format and save it
+          agentTask.Command = outboundMessage["Command"];
+          _taskRepository.Add(agentTask);
+
+          // update the incoming consoleMessage with this task Id
+          consoleMessage.AgentTaskId = agentTask.Id;
+          _taskRepository.Update(consoleMessage.Id, consoleMessage);
+
           string jsonOutboundMessage = JsonConvert.SerializeObject(outboundMessage);
           Dictionary<string, string> encCommand = Crypto.Encrypt(jsonOutboundMessage, agentTask.Id, agentTask.Agent.AesPassword);
 
