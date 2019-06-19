@@ -16,3 +16,23 @@ variables:
 steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
+
+- task: Docker@2
+  displayName: 'Build Docker Image and Push to Docker Hub (Master)'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  inputs:
+    containerRegistry: 'Docker Hub - Faction'
+    repository: 'faction/core'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: 'latest'
+
+- task: Docker@2
+  displayName: 'Build Docker Image and Push to Docker Hub (Development)'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
+  inputs:
+    containerRegistry: 'Docker Hub - Faction'
+    repository: 'faction/core'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: 'dev'
