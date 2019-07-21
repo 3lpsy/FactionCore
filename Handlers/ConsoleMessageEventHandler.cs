@@ -35,15 +35,16 @@ namespace Faction.Core.Handlers
       // Default to false
       return false;
     }
-    
+
     public static bool IsModuleLoaded(Module module)
     {
       return IsModuleLoaded(module.Id);
     }
-    
+
     public static bool IsModuleLoaded(int ModuleId)
     {
-      foreach (AgentsModulesXref xref in LoadedModules) {
+      foreach (AgentsModulesXref xref in LoadedModules)
+      {
         if (xref.ModuleId == ModuleId)
         {
           return true;
@@ -55,7 +56,8 @@ namespace Faction.Core.Handlers
 
   public class FactionCommand
   {
-    public FactionCommand() {
+    public FactionCommand()
+    {
       Arguments = new Dictionary<string, string>();
     }
     public string Command;
@@ -69,7 +71,7 @@ namespace Faction.Core.Handlers
     public string Name;
     public string Description;
     public string ModuleName;
-    public bool ModuleLoaded; 
+    public bool ModuleLoaded;
 
     public ShowCommand(Command command, bool loaded)
     {
@@ -79,7 +81,8 @@ namespace Faction.Core.Handlers
       {
         ModuleName = command.Module.Name;
       }
-      else {
+      else
+      {
         ModuleName = "Builtin";
       }
       ModuleLoaded = loaded;
@@ -106,7 +109,7 @@ namespace Faction.Core.Handlers
   {
     private readonly IEventBus _eventBus;
     private static FactionRepository _taskRepository;
-    
+
     private static bool error = false;
     private static string errorMessage = "";
 
@@ -119,31 +122,32 @@ namespace Faction.Core.Handlers
     // Stolen from: https://stackoverflow.com/a/2132004
     public static string[] SplitArguments(string commandLine)
     {
-        var parmChars = commandLine.ToCharArray();
-        var inSingleQuote = false;
-        var inDoubleQuote = false;
-        for (var index = 0; index < parmChars.Length; index++)
+      var parmChars = commandLine.ToCharArray();
+      var inSingleQuote = false;
+      var inDoubleQuote = false;
+      for (var index = 0; index < parmChars.Length; index++)
+      {
+        if (parmChars[index] == '"' && !inSingleQuote)
         {
-            if (parmChars[index] == '"' && !inSingleQuote)
-            {
-                inDoubleQuote = !inDoubleQuote;
-                if (inDoubleQuote)
-                {
-                  parmChars[index] = ' ';
-                }
-                else {
-                  parmChars[index] = '\n';
-                }
-            }
-            if (parmChars[index] == '\'' && !inDoubleQuote)
-            {
-                inSingleQuote = !inSingleQuote;
-                parmChars[index] = '\n';
-            }
-            if (!inSingleQuote && !inDoubleQuote && parmChars[index] == ' ')
-                parmChars[index] = '\n';
+          inDoubleQuote = !inDoubleQuote;
+          if (inDoubleQuote)
+          {
+            parmChars[index] = ' ';
+          }
+          else
+          {
+            parmChars[index] = '\n';
+          }
         }
-        return (new string(parmChars)).Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parmChars[index] == '\'' && !inDoubleQuote)
+        {
+          inSingleQuote = !inSingleQuote;
+          parmChars[index] = '\n';
+        }
+        if (!inSingleQuote && !inDoubleQuote && parmChars[index] == ' ')
+          parmChars[index] = '\n';
+      }
+      return (new string(parmChars)).Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
     }
 
     public static ConsoleMessage ProcessHelpMessage(ConsoleMessage consoleMessage)
@@ -160,7 +164,7 @@ namespace Faction.Core.Handlers
       try
       {
         recievedCommand = consoleMessage.Content.Remove(0, 5);
-      } 
+      }
       catch
       {
         consoleResponse.Display = $"Faction Agent Help:\n\n* 'show commands' will return a list of available commands.\n* 'show modules' will show available modules\n* 'help <command>` will give you details about a command\n* 'help <command> /<paramater>' will give you details about a commands paramter";
@@ -168,11 +172,11 @@ namespace Faction.Core.Handlers
       }
 
       FactionCommand factionCommand = ProcessCommand(recievedCommand);
-      if (factionCommand.Arguments.Count > 0) 
+      if (factionCommand.Arguments.Count > 0)
       {
         string ParameterName = factionCommand.Arguments.Keys.Last().ToString();
         CommandParameter parameter;
-        try 
+        try
         {
           parameter = _taskRepository.GetCommandParameter(factionCommand.Command, ParameterName);
           if (String.IsNullOrEmpty(parameter.Help))
@@ -184,12 +188,13 @@ namespace Faction.Core.Handlers
             consoleResponse.Display = $"Name: {parameter.Name}\nRequired: {parameter.Required}\nAccepted Values: {parameter.Values}\n\n## Help\n{parameter.Help}";
           }
         }
-        catch 
+        catch
         {
           consoleResponse.Display = $"No parameter named {ParameterName} found for command {factionCommand.Command}";
         }
       }
-      else {
+      else
+      {
         try
         {
           Command command = _taskRepository.GetCommand(factionCommand.Command);
@@ -197,7 +202,8 @@ namespace Faction.Core.Handlers
           {
             consoleResponse.Display = $"No help available for command {command.Name}";
           }
-          else {
+          else
+          {
             consoleResponse.Display = $"Name: {command.Name}";
             consoleResponse.Display += $"\nDescription: {command.Description}";
             consoleResponse.Display += $"\nMitre ATT&CK Reference: {command.MitreReference}";
@@ -208,7 +214,8 @@ namespace Faction.Core.Handlers
             if (parameters.Count() > 0)
             {
               string parameterText = "\nParameters:";
-              foreach (CommandParameter param in parameters){
+              foreach (CommandParameter param in parameters)
+              {
                 parameterText += $"\nName: {param.Name}";
                 parameterText += $"\nRequired: {param.Required.ToString()}";
                 if (param.Position.HasValue)
@@ -223,7 +230,8 @@ namespace Faction.Core.Handlers
               }
               consoleResponse.Display += parameterText;
             }
-            if (!String.IsNullOrEmpty(command.Artifacts)){
+            if (!String.IsNullOrEmpty(command.Artifacts))
+            {
               consoleResponse.Display += "\n\nArtifacts:";
               string[] artifacts = command.Artifacts.Split(",");
               foreach (string artifact in artifacts)
@@ -261,7 +269,7 @@ namespace Faction.Core.Handlers
       {
         showCommand = commandParts[1].ToUpper();
       }
-      else 
+      else
       {
         consoleResponse.Display = $"Unknown SHOW option {commandParts[1]}. Valid options are: {availableShowCommands.ToString()}";
       }
@@ -274,7 +282,8 @@ namespace Faction.Core.Handlers
       if (showCommand == "MODULES")
       {
         List<ShowModule> showModules = new List<ShowModule>();
-        foreach (Module module in AgentDetails.AvailableModules) {
+        foreach (Module module in AgentDetails.AvailableModules)
+        {
           showModules.Add(new ShowModule(module, AgentDetails.IsModuleLoaded(module)));
         }
         consoleResponse.Display = JsonConvert.SerializeObject(showModules);
@@ -302,80 +311,81 @@ namespace Faction.Core.Handlers
     }
 
     // This tasks a command and returns a FactionCommand object of the command and arguments
-    public static FactionCommand ProcessCommand(string Command, int AgentId=0) 
+    public static FactionCommand ProcessCommand(string Command, string[] Arguments = null, int AgentId = 0)
     {
       FactionCommand factionCommand = new FactionCommand();
+      factionCommand.Command = Command;
 
-      // split the command into the command and a string of arguments
-      int index = Command.IndexOf(' ');
-      if (index > 0) {
-        factionCommand.Command = Command.Substring(0, index);
-        string submittedArgs = Command.Substring(index + 1);
+      // process arguments
+      if (Arguments != null)
+      {
+        int index;
+        int position = 0;
 
-        if (submittedArgs.Length > 0) {
-          int position = 0;
-          string[] processedArgs = SplitArguments(submittedArgs);
+        foreach (string arg in Arguments)
+        {
+          if (!error)
+          {
+            string ParameterName = "";
+            string ParameterValue = "";
 
-          foreach (string arg in processedArgs) {
-            if (!error) {
-              string ParameterName = "";
-              string ParameterValue = "";
-
-              // Check to see if arg starts with a param name
-              if (arg.StartsWith('/'))
+            // Check to see if arg starts with a param name
+            if (arg.StartsWith('/'))
+            {
+              index = arg.IndexOf(':');
+              if (index > 0)
               {
-                index = arg.IndexOf(':');
-                if (index > 0)
-                {
-                  ParameterName = arg.TrimStart('/').Substring(0, index).TrimEnd(':');
-                  ParameterValue = arg.Substring(index + 1);
-                }
-                else
-                {
-                  // Hopefully catches the edge case where a positional argument starts with /
-                  ParameterValue = arg;
-                }
+                ParameterName = arg.TrimStart('/').Substring(0, index).TrimEnd(':');
+                ParameterValue = arg.Substring(index + 1);
               }
-
-              // Make sure that we have a proper parameter name either by name or position
-              CommandParameter parameter;
-              if (String.IsNullOrEmpty(ParameterName))
+              else
               {
-                parameter = _taskRepository.GetCommandParameter(factionCommand.Command, position);
+                // Hopefully catches the edge case where a positional argument starts with /
                 ParameterValue = arg;
               }
-              else 
-              {
-                parameter = _taskRepository.GetCommandParameter(factionCommand.Command, ParameterName);
-            
-              }
-
-              // If we couldn't find a matching param, fail out. Else, make sure the param name matches whats was defined
-              if (parameter == null) 
-              {
-                error = true;
-              }
-              else {
-                ParameterName = parameter.Name;
-              }
-
-              // Everything should be defined now. If not, throw an error.
-              if (String.IsNullOrEmpty(ParameterName) || String.IsNullOrEmpty(ParameterValue) || error) {
-                error = true;
-                errorMessage = $"ERROR: Unable to process argument: {arg}";
-              }
-              else {
-                Dictionary<string, string> argDict = new Dictionary<string, string>();
-                factionCommand.Arguments[ParameterName] = ParameterValue.Trim(' ');
-              }
-              position++;
             }
+
+            // Make sure that we have a proper parameter name either by name or position
+            CommandParameter parameter;
+            if (String.IsNullOrEmpty(ParameterName))
+            {
+              parameter = _taskRepository.GetCommandParameter(factionCommand.Command, position);
+              ParameterValue = arg;
+            }
+            else
+            {
+              parameter = _taskRepository.GetCommandParameter(factionCommand.Command, ParameterName);
+
+            }
+
+            // If we couldn't find a matching param, fail out. Else, make sure the param name matches whats was defined
+            if (parameter == null)
+            {
+              error = true;
+            }
+            else
+            {
+              ParameterName = parameter.Name;
+            }
+
+            // Everything should be defined now. If not, throw an error.
+            if (String.IsNullOrEmpty(ParameterName) || String.IsNullOrEmpty(ParameterValue) || error)
+            {
+              error = true;
+              errorMessage = $"ERROR: Unable to process argument: {arg}";
+            }
+            else
+            {
+              Dictionary<string, string> argDict = new Dictionary<string, string>();
+              factionCommand.Arguments[ParameterName] = ParameterValue.Trim(' ');
+            }
+            position++;
           }
-          return factionCommand;
         }
+
+        return factionCommand;
       }
-      factionCommand.Command = Command;
-      return factionCommand;  
+      return factionCommand;
     }
 
     public async Task Handle(NewConsoleMessage newConsoleMessage, string replyTo, string correlationId)
@@ -496,9 +506,11 @@ namespace Faction.Core.Handlers
           }
 
           bool LoadSuccess = false;
-          foreach (Module module in AgentDetails.AvailableModules) {
-            if (module.Name.ToLower() == msg.Name.ToLower()) {
-              _eventBus.Publish(msg, null, null, true);   
+          foreach (Module module in AgentDetails.AvailableModules)
+          {
+            if (module.Name.ToLower() == msg.Name.ToLower())
+            {
+              _eventBus.Publish(msg, null, null, true);
               string message = _eventBus.ResponseQueue.Take();
               ModuleResponse moduleResponse = JsonConvert.DeserializeObject<ModuleResponse>(message);
               outboundMessage.Add("Command", moduleResponse.Contents);
@@ -507,7 +519,8 @@ namespace Faction.Core.Handlers
             }
           }
 
-          if (!LoadSuccess) {
+          if (!LoadSuccess)
+          {
             error = true;
             errorMessage = $"Module {msg.Name} is not a valid module. Use the 'show modules' command to view available modules";
           }
@@ -531,13 +544,48 @@ namespace Faction.Core.Handlers
         // * ls /path:"C:\Program Files"
         if (agentTask.Action == "RUN")
         {
-          FactionCommand factionCommand = ProcessCommand(consoleMessage.Content);
-          string command = $"{factionCommand.Command}";
-          if (factionCommand.Arguments.Count > 0)
+          string submittedCommand = consoleMessage.Content;
+          string[] processedArgs = null;
+
+          // check to see if we have parameters (for example: ls /path:foo)
+          int index = submittedCommand.IndexOf(' ');
+          if (index > 0)
           {
-            command = $"{factionCommand.Command} {JsonConvert.SerializeObject(factionCommand.Arguments)}";
+            // change submittedCommand to just the first part of the command (ex: ls)
+            submittedCommand = submittedCommand.Substring(0, index);
+            string submittedArgs = consoleMessage.Content.Substring(index + 1);
+            if (submittedArgs.Length > 0)
+            {
+              processedArgs = SplitArguments(submittedArgs);
+            }
           }
-          outboundMessage.Add("Command", command);
+
+          // Check if command is available
+          Command commandObject = _taskRepository.GetCommand(submittedCommand);
+          if (commandObject != null)
+          {
+            if (!AgentDetails.IsModuleLoaded(commandObject.Module))
+            {
+              error = true;
+              errorMessage = $"The module for this command isn't loaded. You can load it by running: 'load {commandObject.Module.Name}'";
+            }
+          }
+          else
+          {
+            error = true;
+            errorMessage = $"{submittedCommand} is not a valid command. To view available commands, run: 'show commands'";
+          }
+
+          if (!error)
+          {
+            FactionCommand factionCommand = ProcessCommand(submittedCommand, processedArgs);
+            string command = factionCommand.Command;
+            if (factionCommand.Arguments.Count > 0)
+            {
+              command = $"{factionCommand.Command} {JsonConvert.SerializeObject(factionCommand.Arguments)}";
+            }
+            outboundMessage.Add("Command", command);
+          }
         }
 
         // If there's an error, send it back
