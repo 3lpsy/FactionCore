@@ -561,19 +561,19 @@ namespace Faction.Core.Handlers
           }
 
           // Check if command is available
-          Command commandObject = _taskRepository.GetCommand(submittedCommand);
-          if (commandObject != null)
+          try
           {
+            Command commandObject = _taskRepository.GetCommand(submittedCommand);
             if (!AgentDetails.IsModuleLoaded(commandObject.Module))
             {
               error = true;
               errorMessage = $"The module for this command isn't loaded. You can load it by running: 'load {commandObject.Module.Name}'";
             }
           }
-          else
+          catch
           {
             error = true;
-            errorMessage = $"{submittedCommand} is not a valid command. To view available commands, run: 'show commands'";
+            errorMessage = $"{submittedCommand} is not a valid command for this agent. To view available commands, run: 'show commands'";
           }
 
           if (!error)
