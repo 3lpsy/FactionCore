@@ -21,7 +21,7 @@
     <PackageReference Include="Faction.Common" Version="2019.5.17" />
     <!-- This is used for testing new versions of the common library -->
     <!-- <Reference Include="Faction.Common">
-      <HintPath>.\lib\Faction.Common.dll</HintPath>
+      <HintPath>../Faction.Common/bin/Debug/netstandard2.0/Faction.Common.dll</HintPath>
     </Reference> -->
   </ItemGroup>
 </Project>
