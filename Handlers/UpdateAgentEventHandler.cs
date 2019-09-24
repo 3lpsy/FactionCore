@@ -31,9 +31,7 @@ namespace Faction.Core.Handlers
       agent.Visible = updateAgent.Visible;
       _taskRepository.Update(agent.Id, agent);
 
-      AgentUpdated agentUpdated = new AgentUpdated();
-      agentUpdated.Success = true;
-      agentUpdated.Agent = agent;
+      AgentUpdated agentUpdated = new AgentUpdated {Success = true, Agent = agent};
       _eventBus.Publish(agentUpdated, replyTo, correlationId);
     }
   }

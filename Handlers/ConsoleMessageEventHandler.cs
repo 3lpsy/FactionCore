@@ -265,13 +265,24 @@ namespace Faction.Core.Handlers
       string showCommand = "";
 
       string[] commandParts = consoleMessage.Content.Split(' ');
-      if (availableShowCommands.Contains(commandParts[1].ToUpper()))
+      if (commandParts.Length > 1)
       {
-        showCommand = commandParts[1].ToUpper();
+        if (availableShowCommands.Contains(commandParts[1].ToUpper()))
+        {
+          showCommand = commandParts[1].ToUpper();
+        }
+        else
+        {
+          consoleResponse.Display = $"Unknown SHOW option {commandParts[1]}. Valid options are: {availableShowCommands.ToString()}";
+        }
       }
       else
       {
-        consoleResponse.Display = $"Unknown SHOW option {commandParts[1]}. Valid options are: {availableShowCommands.ToString()}";
+        consoleResponse.Display = $"Available SHOW commands are:";
+        foreach (string availableShowCommand in availableShowCommands)
+        {
+          consoleResponse.Display += $"\n * show {availableShowCommand.ToLower()}";
+        }
       }
 
       if (String.IsNullOrEmpty(showCommand))
@@ -508,13 +519,17 @@ namespace Faction.Core.Handlers
           bool LoadSuccess = false;
           foreach (Module module in AgentDetails.AvailableModules)
           {
-            if (module.Name.ToLower() == msg.Name.ToLower())
+            if (String.Equals(module.Name, msg.Name, StringComparison.CurrentCultureIgnoreCase))
             {
               _eventBus.Publish(msg, null, null, true);
               string message = _eventBus.ResponseQueue.Take();
               ModuleResponse moduleResponse = JsonConvert.DeserializeObject<ModuleResponse>(message);
               outboundMessage.Add("Command", moduleResponse.Contents);
               LoadSuccess = true;
+
+              AgentUpdated agentUpdated = new AgentUpdated {Success = true, Agent = agentTask.Agent};
+              _eventBus.Publish(agentUpdated);
+              
               break;
             }
           }

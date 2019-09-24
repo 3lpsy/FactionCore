@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
@@ -111,8 +112,21 @@ namespace Faction.Core.Handlers
                 languageName = moduleName.Split("/")[0];
                 moduleName = moduleName.Split("/")[1];
               }
-              xref.ModuleId = (_taskRepository.GetModule(moduleName, languageName)).Id;
+
+              Module loadedModule = _taskRepository.GetModule(moduleName, languageName);
+              xref.ModuleId = loadedModule.Id;
               _taskRepository.Add(xref);
+
+              List<Command> loadedCommands = _taskRepository.GetCommands(loadedModule.Id);
+              foreach (Command loadedCommand in loadedCommands)
+              {
+                loadedCommand.Parameters = _taskRepository.GetCommandParameters(loadedCommand.Id);
+              }
+              AgentCommandsUpdated agentCommandsUpdated = new AgentCommandsUpdated();
+              agentCommandsUpdated.Success = true;
+              agentCommandsUpdated.AgentId = xref.AgentId;
+              agentCommandsUpdated.Commands = loadedCommands;
+              _eventBus.Publish(agentCommandsUpdated);
             }
 
             if (taskUpdate.Type == "File" && !String.IsNullOrEmpty(taskUpdate.Content))
