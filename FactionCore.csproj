@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="3.2.1" />
+    <PackageReference Include="Faction.Common" Version="2019.10.3-beta" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.0.0" />
@@ -25,11 +26,5 @@
     <!-- <Reference Include="Faction.Common">
       <HintPath>../Faction.Common/bin/Debug/netstandard2.0/Faction.Common.dll</HintPath>
     </Reference> -->
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Faction.Common, Version=2010.10.4.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\Faction.Common\bin\Debug\netstandard2.1\Faction.Common.dll</HintPath>
-    </Reference>
   </ItemGroup>
 </Project>
