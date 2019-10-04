@@ -14,8 +14,9 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- task: DotNetCoreInstaller@0
+- task: UseDotNet@2
   inputs:
+    packageType: 'sdk'
     version: '3.0.x'
 
 - script: dotnet build --configuration $(buildConfiguration)
