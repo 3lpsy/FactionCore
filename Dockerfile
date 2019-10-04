@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.1-sdk
+FROM mcr.microsoft.com/dotnet/core/sdk:3.0
 WORKDIR /app
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 # copy csproj and restore as distinct layers
