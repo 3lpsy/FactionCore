@@ -9,7 +9,5 @@ RUN dotnet restore
 COPY . ./
 RUN dotnet tool install dotnet-ef --version 3.0.0 --tool-path /usr/bin/ && \
   dotnet publish -c Release -o out && \
-  rm -rf /app/bin && \
-  rm -rf /app/obj && \
   chmod 777 ./wait-for-it.sh
 ENTRYPOINT [ "/bin/bash", "startup.sh" ]

@@ -2,6 +2,10 @@
 
 set -e
 
+>&2 echo "Removing build directories.."
+rm -rf ./bin
+rm -rf ./obj
+
 >&2 echo "Waiting for FactionDB to start..."
 ./wait-for-it.sh db:5432 -- echo "FactionDB Started.."
 
