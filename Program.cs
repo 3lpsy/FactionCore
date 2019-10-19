@@ -85,6 +85,7 @@ namespace Faction.Core
           .Build();
       AutoMigrateSchema(host);
       ConfirmDbSetup(host);
+      Console.WriteLine("Starting faction server...");
       host.Start();
     }
 
