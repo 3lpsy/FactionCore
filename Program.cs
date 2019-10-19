@@ -28,6 +28,9 @@ namespace Faction.Core
   class FactionCoreDbContext : FactionDbContext {}
   class Program
   {
+    // this is the first migration added to Faction.Common
+    private static string initialMigrationName = "20191019033321_Initial";
+
     public static void Main(string[] args)
     {
       FactionSettings factionSettings = Utility.GetConfiguration();
@@ -47,11 +50,16 @@ namespace Faction.Core
           })
           .ConfigureServices((hostContext, services) =>
           {
-            string assemblyName = typeof(FactionDbContext).Namespace;
+            string assemblyName = typeof(FactionDbContext).Assembly.FullName;
             services.AddEntityFrameworkNpgsql().AddDbContext<FactionDbContext>(options =>
                       options.UseNpgsql(connectionString,
                       optionsBuilder => optionsBuilder.MigrationsAssembly(assemblyName))
                   );
+
+            // Check to see if the database is listening and receptive to commands. 
+            // does not check if database is configured/setup
+            ConfirmDbReady(services);
+
 
             // Open a connection to RabbitMQ and register it with DI
             services.AddSingleton<IRabbitMQPersistentConnection>(options =>
@@ -73,28 +81,10 @@ namespace Faction.Core
             // Configure the above registered EventBus with all the Event to EventHandler mappings
             ConfigureEventBus(services);
 
-            // Ensure the DB is initalized and seeding data
-            // SeedData(services);
-            bool dbLoaded = false;
-            Console.WriteLine("Checking if database is ready");
-            using (var context = new FactionDbContext())
-            {
-              while (!dbLoaded) {
-                try {
-                  var language = context.Language.CountAsync();
-                  language.Wait();
-                  dbLoaded = true;
-                  Console.WriteLine("Database is ready");
-                }
-                catch (Exception exception) {
-                  Console.WriteLine($"Database not ready, waiting 5 seconds. Error: {exception.Message}");
-                  Task.Delay(5000).Wait();
-                }
-              }
-            }
-
           })
           .Build();
+      AutoMigrateSchema(host);
+      ConfirmDbSetup(host);
       host.Start();
     }
 
@@ -134,6 +124,143 @@ namespace Faction.Core
       eventBus.Subscribe<NewStagingMessage, NewStagingMessageEventHandler>();
       eventBus.Subscribe<UpdateAgent, UpdateAgentEventHandler>();
       eventBus.Subscribe<UpdateTransport, UpdateTransportEventHandler>();
+    }
+
+
+    public static IHost AutoMigrateSchema(IHost host)
+    {
+      char[] trimQuotes = {'"', '\''};
+
+      // check if auto migration is enabled
+      string shouldAutoMigrate = Environment.GetEnvironmentVariable("POSTGRES_AUTO_MIGRATE") ?? "0";
+      shouldAutoMigrate = shouldAutoMigrate.ToLower().Trim(trimQuotes);
+      if (shouldAutoMigrate == "1" || shouldAutoMigrate == "true") {
+        Console.WriteLine("Checking for new schemas to auto migrate...");
+        using (var scope = host.Services.CreateScope())
+        {
+          // confirm that this deployment is compatible with automigration by checking first migration was initialMigrationName
+          try {
+            var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
+            var migrations = dbContext.Database.GetMigrations();
+            bool isMigrationCompatible = false;
+            foreach (string migration in migrations) {
+              if (migration == initialMigrationName) {
+                isMigrationCompatible = true;
+              }
+              Console.WriteLine($"Found migration: {migration}");
+            }
+
+          // apply migration if the project was (presumably) built after static migrations were introduced
+            if (isMigrationCompatible) {
+              ApplyMigrations(dbContext);
+            } 
+            else {
+              // allow user to attempt to apply self-built migrations. this will most likely fail, but it's up to them
+              // the reason it'll fail is because their migrations were most likely generated in the Core project, not Faction.Common
+              // EF will (probably) fail to find these migrations. however, properly generated ones should work even if self-built.
+              string shouldForceAutoMigrate = Environment.GetEnvironmentVariable("POSTGRES_AUTO_MIGRATE_FORCE") ?? "0";
+              shouldForceAutoMigrate = shouldForceAutoMigrate.ToLower().Trim(trimQuotes);
+              Console.WriteLine($"Could not find the official initial migration '{initialMigrationName}' in current or pending migrations. The current database either has migrations applied from a self-built migration set or Faction.Common is outdated or contains self-built migrations");
+              if (shouldForceAutoMigrate == "1" || shouldForceAutoMigrate == "true") {
+                ApplyMigrations(dbContext);
+              } else {
+                // otherwise, just exit and tell the user not to use auto migrations
+                Console.WriteLine("Auto migrating is discouraged with self built migrations. Please either disable auto migrations by setting 'POSTGRES_AUTO_MIGRATE' to '0' or forcing automatic migrations with self-built migrations by setting 'POSTGRES_AUTO_MIGRATE_FORCE' to '1'. Please note forcing migrations may corrupt data or have unknown consequences");
+                Environment.Exit(1);
+              }
+            }
+
+          }
+          catch (System.IO.FileNotFoundException ex) {
+            // this is one of the original error that occurs when EF Core cannot find the Migrations inside of Faction.Common.
+            Console.WriteLine($"Unable to automatically apply migrations! The Faction.Common assembly most likely does not contain Migrations.");
+            Console.WriteLine("Please pull an updated version of Faction.Common or disable auto migrate by setting 'POSTGRES_AUTO_MIGRATE' to 0.");
+            Console.WriteLine($"Error: {ex.GetType()}");
+            Environment.Exit(1);
+          }
+          catch (System.IO.FileLoadException ex) {
+            // this is one of the original error that occurs when EF Core cannot find the Migrations inside of Faction.Common.
+            Console.WriteLine($"Unable to automatically apply migrations! The Faction.Common assembly most likely does not contain Migrations.");
+            Console.WriteLine("Please pull an updated version of Faction.Common or disable auto migrate by setting 'POSTGRES_AUTO_MIGRATE' to 0.");
+            Console.WriteLine($"Error: {ex.GetType()}");
+            Environment.Exit(1);
+          }
+          // there is the potential for an uncaught aggregate exception here.
+        }
+      } else {
+        Console.WriteLine("Skipping auto migration of schemas...");
+      }
+
+      return host;
+    }
+
+    public static void ApplyMigrations(DbContext dbContext) {
+      var pendingMigrations = dbContext.Database.GetPendingMigrations();
+      var pendingMigrationsCount = 0;
+      foreach (string pendingMigration in pendingMigrations) {
+        Console.WriteLine($"Found pending migration: {pendingMigration}");
+        pendingMigrationsCount += 1;
+      }
+      Console.WriteLine($"Applying {pendingMigrationsCount} migrations...");
+      dbContext.Database.Migrate();
+    }
+
+    public static void ConfirmDbReady(IServiceCollection services) {
+      bool dbReady = false;
+      var dbContext = services.BuildServiceProvider().GetService<FactionDbContext>();
+      while (! dbReady) {
+        using (var command = dbContext.Database.GetDbConnection().CreateCommand()) {
+          command.CommandText = "SELECT 1;";
+          command.CommandType = System.Data.CommandType.Text;
+          try {
+            dbContext.Database.OpenConnection();
+          } catch (System.InvalidOperationException ex) {
+            // TODO: handle errors
+            Console.WriteLine($"Database not ready yet. Waiting 5 seconds. Error: {ex.GetType()}");
+            Task.Delay(5000).Wait();
+            continue;
+          }
+          using (var reader = command.ExecuteReader()) {
+            while (reader.HasRows) {
+                while (reader.Read())
+                {
+                  var result = (int) reader.GetInt32(0);
+                  if (result == 1) {
+                    Console.WriteLine("Database is listening...");
+                    dbReady = true;
+                  }
+                }
+                reader.NextResult();
+            }
+          }
+        }
+      }
+    }
+
+    public static IHost ConfirmDbSetup(IHost host)
+    {
+      bool dbLoaded = false;
+      Console.WriteLine("Checking if Database is setup...");
+      using (var scope = host.Services.CreateScope())
+      {
+        var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
+        while (!dbLoaded)
+        {
+          try
+          {
+            var language = dbContext.Language.CountAsync();
+            language.Wait();
+            dbLoaded = true;
+            Console.WriteLine("Database is setup");
+          }
+          catch (Exception exception)
+          {
+            Console.WriteLine($"Database not setup, waiting 5 seconds. Error: {exception.GetType()} - {exception.Message}");
+            Task.Delay(5000).Wait();
+          }
+        }
+      }
+      return host;
     }
   }
 }
