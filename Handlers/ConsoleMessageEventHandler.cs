@@ -546,7 +546,28 @@ namespace Faction.Core.Handlers
         // * set beacon:5
         else if (agentTask.Action == "SET")
         {
-          outboundMessage.Add("Command", consoleMessageComponents[1]);
+          List<string> validSetCommands = new List<string> {"beaconinterval", "jitter"};
+          if (consoleMessageComponents.Length == 2)
+          {
+            if (validSetCommands.Any(validOption => consoleMessageComponents[1].ToLower().StartsWith(validOption)))
+            {
+              outboundMessage.Add("Command", consoleMessageComponents[1]);
+            }
+            else
+            {
+              error = true;
+              errorMessage = $"{consoleMessageComponents[1]} is not a valid option for set. The following SET options are valid: \n" +
+                             $"* set BeaconInterval\n" +
+                             $"* set Jitter\n";
+            }
+          }
+          else
+          {
+            error = true;
+            errorMessage = $"The following SET options are valid: \n" +
+                           $"* set BeaconInterval\n" +
+                           $"* set Jitter\n";
+          }
         }
 
         else if (agentTask.Action == "EXIT")
