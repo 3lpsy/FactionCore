@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -85,6 +86,7 @@ namespace Faction.Core
           .Build();
       AutoMigrateSchema(host);
       ConfirmDbSetup(host);
+      AutoSeedDb(host);
       Console.WriteLine("Starting faction server...");
       using (host) {
         host.Start();
@@ -261,6 +263,86 @@ namespace Faction.Core
             Console.WriteLine($"Database not setup, waiting 5 seconds. Error: {exception.GetType()} - {exception.Message}");
             Task.Delay(5000).Wait();
           }
+        }
+      }
+      return host;
+    }
+
+    public static void AutoSeedRoles(FactionDbContext dbContext) {
+      // the necessary default roles
+      string[] roleNames = {"system", "admin", "operator", "readonly"};
+      foreach(string roleName in roleNames) {
+        // check if the role exists
+        var existingRole = dbContext.UserRole.FirstOrDefault(r => r.Name.ToLower() == roleName);
+        if (existingRole == null) {
+          // if not, create it
+          var role = new UserRole{
+            Name = roleName
+          };
+          dbContext.Add(role);
+          Console.WriteLine($"Saving role for {roleName}");
+          dbContext.SaveChanges();
+        } else {
+          Console.WriteLine($"Role already exists for {existingRole.Name}");
+        }
+      }
+    }
+
+    public static void AutoSeedDefaultUsers(FactionDbContext dbContext) {
+      // the necessary default roles
+      var roles = dbContext.UserRole.ToList();
+      foreach(UserRole role in roles) {
+        string roleEnvPrefix = role.Name.ToUpper();
+        string roleEnvUsernameKey = roleEnvPrefix + "_USERNAME";
+        string username = Environment.GetEnvironmentVariable(roleEnvUsernameKey);
+        if (! String.IsNullOrEmpty(username)) {
+          string roleEnvPasswordKey = roleEnvPrefix + "_PASSWORD";
+          string password = Environment.GetEnvironmentVariable(roleEnvPasswordKey);
+          if (! String.IsNullOrEmpty(password)) {
+            
+            var existingUser = dbContext.User.FirstOrDefault(r => r.Username.ToLower() == username);
+            if (existingUser == null) {
+
+              byte[] passwordHash = Encoding.UTF8.GetBytes(BCrypt.Net.BCrypt.HashPassword(password));
+              var user = new User{
+                Username = username,
+                RoleId = role.Id,
+                Enabled = true,
+                Visible = true,
+                Password = passwordHash
+              };
+              dbContext.Add(user);
+              Console.WriteLine($"Saving {role.Name} user {user.Username}");
+
+              dbContext.SaveChanges();
+            } else {
+              Console.WriteLine($"The user {existingUser.Username} already exists. Skipping..");
+            }
+
+          } else {
+            Console.WriteLine($"No value found for {roleEnvPasswordKey}. Skipping...");
+          }
+        } else {
+          Console.WriteLine($"No value found for {roleEnvUsernameKey}. Skipping...");
+        }
+      }
+    }
+
+    public static IHost AutoSeedDb(IHost host)
+    {
+      char[] trimQuotes = {'"', '\''};
+      // check if auto seed is enabled
+      string shouldAutoSeed = Environment.GetEnvironmentVariable("POSTGRES_AUTO_SEED") ?? "0";
+      shouldAutoSeed = shouldAutoSeed.ToLower().Trim(trimQuotes);
+      if (shouldAutoSeed == "1" || shouldAutoSeed == "true") {
+        Console.WriteLine("Seeding Database...");
+        using (var scope = host.Services.CreateScope())
+        {
+          var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
+          // first, seed the default roles
+          AutoSeedRoles(dbContext);
+          // second, seed the system
+          AutoSeedDefaultUsers(dbContext);
         }
       }
       return host;
