@@ -289,20 +289,22 @@ namespace Faction.Core
     }
 
     public static void AutoSeedDefaultUsers(FactionDbContext dbContext) {
-      // the necessary default roles
+      // loop over roles and see if env variables are set for those users
       var roles = dbContext.UserRole.ToList();
       foreach(UserRole role in roles) {
+        // create the env key (i.e. ADMIN_USERNAME, SYSTEM_USERNAME)
         string roleEnvPrefix = role.Name.ToUpper();
         string roleEnvUsernameKey = roleEnvPrefix + "_USERNAME";
         string username = Environment.GetEnvironmentVariable(roleEnvUsernameKey);
         if (! String.IsNullOrEmpty(username)) {
+          // make sure there is a corresponding password set
           string roleEnvPasswordKey = roleEnvPrefix + "_PASSWORD";
           string password = Environment.GetEnvironmentVariable(roleEnvPasswordKey);
           if (! String.IsNullOrEmpty(password)) {
-            
+            // if the user already exists, just continue, otherwise create the user
             var existingUser = dbContext.User.FirstOrDefault(r => r.Username.ToLower() == username);
             if (existingUser == null) {
-
+              // HashPassword returns a string, convert it byte[]
               byte[] passwordHash = Encoding.UTF8.GetBytes(BCrypt.Net.BCrypt.HashPassword(password));
               var user = new User{
                 Username = username,
@@ -313,18 +315,88 @@ namespace Faction.Core
               };
               dbContext.Add(user);
               Console.WriteLine($"Saving {role.Name} user {user.Username}");
-
               dbContext.SaveChanges();
             } else {
               Console.WriteLine($"The user {existingUser.Username} already exists. Skipping..");
             }
-
           } else {
             Console.WriteLine($"No value found for {roleEnvPasswordKey}. Skipping...");
           }
         } else {
           Console.WriteLine($"No value found for {roleEnvUsernameKey}. Skipping...");
         }
+      }
+    }
+
+    public static string GenerateUrlSafeSecret(int keyLength) {
+      char[] padding = { '=' };
+      RNGCryptoServiceProvider rngCryptoServiceProvider = new RNGCryptoServiceProvider();
+      byte[] targetBytes = new byte[keyLength];
+      rngCryptoServiceProvider.GetBytes(targetBytes);
+      return Convert.ToBase64String(targetBytes).TrimEnd(padding).Replace('+', '-').Replace('/', '_');
+    }
+
+    public static void AutoSeedDefaultApiKeyAndTransport(FactionDbContext dbContext) {
+      // generate name (12 bytes) and secret (48 bytes)
+      var existingApiKey = dbContext.ApiKey.FirstOrDefault();
+      if (existingApiKey == null) { 
+        var apiKeyName = GenerateUrlSafeSecret(12);
+        var apiKeyToken = GenerateUrlSafeSecret(48);
+        var apiKeyTokenHash = BCrypt.Net.BCrypt.HashPassword(apiKeyToken);
+        var apiKeyBytes = Encoding.UTF8.GetBytes(apiKeyTokenHash);
+        var defaultSystemUser = dbContext.User.FirstOrDefault(u => u.Role.Name.ToLower() == "system");
+
+        if (defaultSystemUser != null ) {
+          var apiKey = new ApiKey {
+            Name = apiKeyName,
+            Key = apiKeyBytes,
+            UserId = defaultSystemUser.Id,
+            OwnerId = defaultSystemUser.Id,
+            Enabled = true,
+            Visible = true
+          };
+          dbContext.Add(apiKey);
+          Console.WriteLine($"Saving Api Key {apiKey.Name}");
+          dbContext.SaveChanges();
+
+          string transportExternalAddress = Environment.GetEnvironmentVariable("EXTERNAL_ADDRESS");
+          if (! String.IsNullOrEmpty(transportExternalAddress)) {
+            var existingTransport = dbContext.Transport.FirstOrDefault();
+            if (existingTransport == null) {
+              string transportName = "DIRECT Transport";
+              string transportType = "DIRECT";
+              string transportGUID = "0000-0000-0000-0000-0000";
+              string transportConfiguration = "{\"TransportId\": 1, \"ApiUrl\":\"" 
+                  + transportExternalAddress +  
+                  "\",\"ApiKeyName\":\"" + 
+                  apiKey.Name + 
+                  "\",\"ApiSecret\":\"" + 
+                  apiKeyToken +
+                  "\"}";
+
+              var transport = new Transport {
+                Name = transportName,
+                TransportType = transportType,
+                Guid = transportGUID,
+                Configuration = transportConfiguration,
+                ApiKeyId = apiKey.Id,
+                Enabled = true,
+                Visible = true
+              };
+              dbContext.Add(transport);
+              Console.WriteLine($"Saving new default transport {transport.Name}");
+              dbContext.SaveChanges();
+            } else {
+              Console.WriteLine("A transport already exists. Skipping creating default transport");
+            }
+          } else {
+            Console.WriteLine("No external address defined. Unable to create direct transport. Skipping");
+          }
+        } else {
+          Console.WriteLine("Unable to create API Key. No system user found. Skipping.");
+        }
+      } else {
+        Console.WriteLine("An ApiKey already exists. Skipping.");
       }
     }
 
@@ -341,8 +413,10 @@ namespace Faction.Core
           var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
           // first, seed the default roles
           AutoSeedRoles(dbContext);
-          // second, seed the system
+          // second, seed the users
           AutoSeedDefaultUsers(dbContext);
+          // next seed the default api key and default transport
+          AutoSeedDefaultApiKeyAndTransport(dbContext);
         }
       }
       return host;
