@@ -86,7 +86,9 @@ namespace Faction.Core
       AutoMigrateSchema(host);
       ConfirmDbSetup(host);
       Console.WriteLine("Starting faction server...");
-      host.Start();
+      using (host) {
+        host.Start();
+      }
     }
 
     // TODO: Pass in the Exchange and Queue names to the constrcutors here (from appsettings.json)
