@@ -26,7 +26,8 @@ WORKDIR /app
 # startup has three commands: publish, restore, and the empty/default/no command
 # the empty/default command just runs the project
 COPY startup.sh /opt/startup.sh
-RUN chmod +x /opt/startup.sh
+RUN dotnet tool install dotnet-ef --version 3.0 --tool-path /usr/local/bin/ &&\
+  chmod +x /opt/startup.sh
 
 # copy csproj before the rest of the project to pull
 # dependencies early to cache properly
