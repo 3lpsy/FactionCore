@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.0
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1
 
 # when building, the default config will run dotnet restore
 # if using a local/dev version of Faction.Common (as a volume), this will fail
