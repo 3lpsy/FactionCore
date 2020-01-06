@@ -109,6 +109,7 @@ namespace Faction.Core
       services.AddTransient<NewAgentCheckinEventHandler>();
       services.AddTransient<NewConsoleMessageEventHandler>();
       services.AddTransient<NewErrorMessageEventHandler>();
+      services.AddTransient<NewPayloadEventHandler>();
       services.AddTransient<NewTransportEventHandler>();
       services.AddTransient<NewStagingMessageEventHandler>();
       services.AddTransient<UpdateAgentEventHandler>();
@@ -123,9 +124,11 @@ namespace Faction.Core
       eventBus.Subscribe<NewAgentCheckin, NewAgentCheckinEventHandler>();
       eventBus.Subscribe<NewConsoleMessage, NewConsoleMessageEventHandler>();
       eventBus.Subscribe<NewErrorMessage, NewErrorMessageEventHandler>();
+      eventBus.Subscribe<NewPayload, NewPayloadEventHandler>();
       eventBus.Subscribe<NewTransport, NewTransportEventHandler>();
       eventBus.Subscribe<NewStagingMessage, NewStagingMessageEventHandler>();
       eventBus.Subscribe<UpdateAgent, UpdateAgentEventHandler>();
+      eventBus.Subscribe<UpdatePayload, UpdatePayloadEventHandler>();
       eventBus.Subscribe<UpdateTransport, UpdateTransportEventHandler>();
     }
 
