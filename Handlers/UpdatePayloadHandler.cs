@@ -38,8 +38,8 @@ namespace Faction.Core.Handlers
       payload.BeaconInterval = updatePayload.BeaconInterval;
       
       // This is a hack to keep expiration date from getting set to a default date
-      if (updatePayload.ExpirationDate != null) {
-        int diff = DateTime.Compare(updatePayload.ExpirationDate, new DateTime(2001, 01, 01));
+      if (updatePayload.ExpirationDate.HasValue) {
+        int diff = DateTime.Compare(updatePayload.ExpirationDate.Value, new DateTime(2001, 01, 01));
         if (diff > 0 ) {
           payload.ExpirationDate = updatePayload.ExpirationDate;
         }

@@ -31,14 +31,22 @@ namespace Faction.Core.Handlers
     {
       Console.WriteLine($"[i] Got New Payload Message.");
       Payload payload = new Payload();
-      payload.AgentType = _taskRepository.GetAgentType(newPayload.AgentTypeId);
-      payload.AgentTransportType = _taskRepository.GetAgentTransportType(newPayload.AgentTransportTypeId);
-      payload.Transport = _taskRepository.GetTransport(newPayload.TransportId);
+      
       payload.AgentTypeArchitectureId = newPayload.ArchitectureId;
       payload.AgentTypeFormatId = newPayload.FormatId;
       payload.AgentTypeVersionId = newPayload.VersionId;
       payload.AgentTypeConfigurationId = newPayload.AgentTypeConfigurationId;
       payload.AgentTypeOperatingSystemId = newPayload.OperatingSystemId;
+
+      payload.AgentType = _taskRepository.GetAgentType(newPayload.AgentTypeId);
+      payload.AgentType.Language = _taskRepository.GetLanguage(payload.AgentType.LanguageId);
+      payload.AgentTransportType = _taskRepository.GetAgentTransportType(newPayload.AgentTransportTypeId);
+      payload.Transport = _taskRepository.GetTransport(newPayload.TransportId);
+      payload.AgentTypeFormat = _taskRepository.GetAgentTypeFormat(newPayload.FormatId);
+      payload.AgentTypeArchitecture = _taskRepository.GetAgentTypeArchitecture(newPayload.ArchitectureId);
+      payload.AgentTypeOperatingSystem = _taskRepository.GetAgentTypeOperatingSystem(newPayload.OperatingSystemId);
+      payload.AgentTypeConfiguration = _taskRepository.GetAgentTypeConfiguration(newPayload.AgentTypeConfigurationId);
+      
       payload.Debug = newPayload.Debug;
 
       payload.Name = newPayload.Name;
@@ -55,7 +63,9 @@ namespace Faction.Core.Handlers
       payload.Key = Utility.GenerateSecureString(32);
       payload.LanguageId = payload.AgentType.LanguageId;
       _taskRepository.Add(payload);
-      _eventBus.Publish(payload, replyTo, correlationId);
+
+      PayloadCreated payloadCreated = new PayloadCreated(true, payload);
+      _eventBus.Publish(payloadCreated, replyTo, correlationId);
       
      if (payload.AgentType.Development)
      {
@@ -72,6 +82,7 @@ namespace Faction.Core.Handlers
        NewPayloadBuild newPayloadBuild = new NewPayloadBuild();
        newPayloadBuild.PayloadId = payload.Id;
        newPayloadBuild.AgentTypeId = payload.AgentTypeId;
+       newPayloadBuild.LanguageName = payload.AgentType.Language.Name;
        _eventBus.Publish(newPayloadBuild, replyTo, correlationId);
      }
     }
