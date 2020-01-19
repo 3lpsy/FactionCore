@@ -113,8 +113,10 @@ namespace Faction.Core
       services.AddTransient<NewTransportEventHandler>();
       services.AddTransient<NewStagingMessageEventHandler>();
       services.AddTransient<UpdateAgentEventHandler>();
+      services.AddTransient<UpdatePayloadEventHandler>();
       services.AddTransient<UpdateTransportEventHandler>();
     }
+    
     private static void ConfigureEventBus(IServiceCollection services)
     {
       var sp = services.BuildServiceProvider();
