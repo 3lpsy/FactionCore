@@ -164,8 +164,7 @@ namespace Faction.Core
             // apply migration if the project was (presumably) built after static migrations were introduced
             if (isMigrationCompatible) {
               ApplyMigrations(dbContext);
-            }
-            else {
+            } else {
               // allow user to attempt to apply self-built migrations. this will most likely fail, but it's up to them
               // the reason it'll fail is because their migrations were most likely generated in the Core project, not Faction.Common
               // EF will (probably) fail to find these migrations. however, properly generated ones should work even if self-built.
@@ -174,23 +173,20 @@ namespace Faction.Core
               Console.WriteLine($"Could not find the official initial migration '{initialMigrationName}' in current or pending migrations. The current database either has migrations applied from a self-built migration set or Faction.Common is outdated or contains self-built migrations");
               if (shouldForceAutoMigrate == "1" || shouldForceAutoMigrate == "true") {
                 ApplyMigrations(dbContext);
-              }
-              else {
+              } else {
                 // otherwise, just exit and tell the user not to use auto migrations
                 Console.WriteLine("Auto migrating is discouraged with self built migrations. Please either disable auto migrations by setting 'POSTGRES_AUTO_MIGRATE' to '0' or forcing automatic migrations with self-built migrations by setting 'POSTGRES_AUTO_MIGRATE_FORCE' to '1'. Please note forcing migrations may corrupt data or have unknown consequences");
                 Environment.Exit(1);
               }
             }
 
-          }
-          catch (System.IO.FileNotFoundException ex) {
+          } catch (System.IO.FileNotFoundException ex) {
             // this is one of the original error that occurs when EF Core cannot find the Migrations inside of Faction.Common.
             Console.WriteLine($"Unable to automatically apply migrations! The Faction.Common assembly most likely does not contain Migrations.");
             Console.WriteLine("Please pull an updated version of Faction.Common or disable auto migrate by setting 'POSTGRES_AUTO_MIGRATE' to 0.");
             Console.WriteLine($"Error: {ex.GetType()}");
             Environment.Exit(1);
-          }
-          catch (System.IO.FileLoadException ex) {
+          } catch (System.IO.FileLoadException ex) {
             // this is one of the original error that occurs when EF Core cannot find the Migrations inside of Faction.Common.
             Console.WriteLine($"Unable to automatically apply migrations! The Faction.Common assembly most likely does not contain Migrations.");
             Console.WriteLine("Please pull an updated version of Faction.Common or disable auto migrate by setting 'POSTGRES_AUTO_MIGRATE' to 0.");
@@ -199,8 +195,7 @@ namespace Faction.Core
           }
           // there is the potential for an uncaught aggregate exception here.
         }
-      }
-      else {
+      } else {
         Console.WriteLine("Skipping auto migration of schemas...");
       }
 
@@ -229,8 +224,7 @@ namespace Faction.Core
           command.CommandType = System.Data.CommandType.Text;
           try {
             dbContext.Database.OpenConnection();
-          }
-          catch (System.InvalidOperationException ex) {
+          } catch (System.InvalidOperationException ex) {
             // TODO: handle errors
             Console.WriteLine($"Database not ready yet. Waiting 5 seconds. Error: {ex.GetType()}");
             Task.Delay(5000).Wait();
@@ -264,8 +258,7 @@ namespace Faction.Core
             language.Wait();
             dbLoaded = true;
             Console.WriteLine("Database is setup");
-          }
-          catch (Exception exception) {
+          } catch (Exception exception) {
             Console.WriteLine($"Database not setup, waiting 5 seconds. Error: {exception.GetType()} - {exception.Message}");
             Task.Delay(5000).Wait();
           }
@@ -290,8 +283,7 @@ namespace Faction.Core
           dbContext.Add(role);
           Console.WriteLine($"Saving role for {roleName}");
           dbContext.SaveChanges();
-        }
-        else {
+        } else {
           Console.WriteLine($"Role already exists for {existingRole.Name}");
         }
       }
@@ -327,16 +319,13 @@ namespace Faction.Core
               dbContext.Add(user);
               Console.WriteLine($"Saving {role.Name} user {user.Username}");
               dbContext.SaveChanges();
-            }
-            else {
+            } else {
               Console.WriteLine($"The user {existingUser.Username} already exists. Skipping..");
             }
-          }
-          else {
+          } else {
             Console.WriteLine($"No value found for {roleEnvPasswordKey}. Skipping...");
           }
-        }
-        else {
+        } else {
           Console.WriteLine($"No value found for {roleEnvUsernameKey}. Skipping...");
         }
       }
@@ -404,20 +393,16 @@ namespace Faction.Core
               dbContext.Add(transport);
               Console.WriteLine($"Saving new default transport {transport.Name}");
               dbContext.SaveChanges();
-            }
-            else {
+            } else {
               Console.WriteLine("A transport already exists. Skipping creating default transport");
             }
-          }
-          else {
+          } else {
             Console.WriteLine("No external address defined. Unable to create direct transport. Skipping");
           }
-        }
-        else {
+        } else {
           Console.WriteLine("Unable to create API Key. No system user found. Skipping.");
         }
-      }
-      else {
+      } else {
         Console.WriteLine("An ApiKey already exists. Skipping.");
       }
     }
