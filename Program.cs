@@ -90,8 +90,7 @@ namespace Faction.Core
       AutoSeedDb(host);
 
       Console.WriteLine("Starting faction server...");
-      using (host)
-      {
+      using (host) {
         host.Start();
       }
     }
@@ -147,45 +146,36 @@ namespace Faction.Core
       // check if auto migration is enabled
       string shouldAutoMigrate = Environment.GetEnvironmentVariable("POSTGRES_AUTO_MIGRATE") ?? "0";
       shouldAutoMigrate = shouldAutoMigrate.ToLower().Trim(trimQuotes);
-      if (shouldAutoMigrate == "1" || shouldAutoMigrate == "true")
-      {
+      if (shouldAutoMigrate == "1" || shouldAutoMigrate == "true") {
         Console.WriteLine("Checking for new schemas to auto migrate...");
-        using (var scope = host.Services.CreateScope())
-        {
+        using (var scope = host.Services.CreateScope()) {
           // confirm that this deployment is compatible with automigration by checking first migration was initialMigrationName
-          try
-          {
+          try {
             var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
             var migrations = dbContext.Database.GetMigrations();
             bool isMigrationCompatible = false;
-            foreach (string migration in migrations)
-            {
-              if (migration == initialMigrationName)
-              {
+            foreach (string migration in migrations) {
+              if (migration == initialMigrationName) {
                 isMigrationCompatible = true;
               }
               Console.WriteLine($"Found migration: {migration}");
             }
 
             // apply migration if the project was (presumably) built after static migrations were introduced
-            if (isMigrationCompatible)
-            {
+            if (isMigrationCompatible) {
               ApplyMigrations(dbContext);
             }
-            else
-            {
+            else {
               // allow user to attempt to apply self-built migrations. this will most likely fail, but it's up to them
               // the reason it'll fail is because their migrations were most likely generated in the Core project, not Faction.Common
               // EF will (probably) fail to find these migrations. however, properly generated ones should work even if self-built.
               string shouldForceAutoMigrate = Environment.GetEnvironmentVariable("POSTGRES_AUTO_MIGRATE_FORCE") ?? "0";
               shouldForceAutoMigrate = shouldForceAutoMigrate.ToLower().Trim(trimQuotes);
               Console.WriteLine($"Could not find the official initial migration '{initialMigrationName}' in current or pending migrations. The current database either has migrations applied from a self-built migration set or Faction.Common is outdated or contains self-built migrations");
-              if (shouldForceAutoMigrate == "1" || shouldForceAutoMigrate == "true")
-              {
+              if (shouldForceAutoMigrate == "1" || shouldForceAutoMigrate == "true") {
                 ApplyMigrations(dbContext);
               }
-              else
-              {
+              else {
                 // otherwise, just exit and tell the user not to use auto migrations
                 Console.WriteLine("Auto migrating is discouraged with self built migrations. Please either disable auto migrations by setting 'POSTGRES_AUTO_MIGRATE' to '0' or forcing automatic migrations with self-built migrations by setting 'POSTGRES_AUTO_MIGRATE_FORCE' to '1'. Please note forcing migrations may corrupt data or have unknown consequences");
                 Environment.Exit(1);
@@ -193,16 +183,14 @@ namespace Faction.Core
             }
 
           }
-          catch (System.IO.FileNotFoundException ex)
-          {
+          catch (System.IO.FileNotFoundException ex) {
             // this is one of the original error that occurs when EF Core cannot find the Migrations inside of Faction.Common.
             Console.WriteLine($"Unable to automatically apply migrations! The Faction.Common assembly most likely does not contain Migrations.");
             Console.WriteLine("Please pull an updated version of Faction.Common or disable auto migrate by setting 'POSTGRES_AUTO_MIGRATE' to 0.");
             Console.WriteLine($"Error: {ex.GetType()}");
             Environment.Exit(1);
           }
-          catch (System.IO.FileLoadException ex)
-          {
+          catch (System.IO.FileLoadException ex) {
             // this is one of the original error that occurs when EF Core cannot find the Migrations inside of Faction.Common.
             Console.WriteLine($"Unable to automatically apply migrations! The Faction.Common assembly most likely does not contain Migrations.");
             Console.WriteLine("Please pull an updated version of Faction.Common or disable auto migrate by setting 'POSTGRES_AUTO_MIGRATE' to 0.");
@@ -212,8 +200,7 @@ namespace Faction.Core
           // there is the potential for an uncaught aggregate exception here.
         }
       }
-      else
-      {
+      else {
         Console.WriteLine("Skipping auto migration of schemas...");
       }
 
@@ -224,8 +211,7 @@ namespace Faction.Core
     {
       var pendingMigrations = dbContext.Database.GetPendingMigrations();
       var pendingMigrationsCount = 0;
-      foreach (string pendingMigration in pendingMigrations)
-      {
+      foreach (string pendingMigration in pendingMigrations) {
         Console.WriteLine($"Found pending migration: {pendingMigration}");
         pendingMigrationsCount += 1;
       }
@@ -237,32 +223,24 @@ namespace Faction.Core
     {
       bool dbReady = false;
       var dbContext = services.BuildServiceProvider().GetService<FactionDbContext>();
-      while (!dbReady)
-      {
-        using (var command = dbContext.Database.GetDbConnection().CreateCommand())
-        {
+      while (!dbReady) {
+        using (var command = dbContext.Database.GetDbConnection().CreateCommand()) {
           command.CommandText = "SELECT 1;";
           command.CommandType = System.Data.CommandType.Text;
-          try
-          {
+          try {
             dbContext.Database.OpenConnection();
           }
-          catch (System.InvalidOperationException ex)
-          {
+          catch (System.InvalidOperationException ex) {
             // TODO: handle errors
             Console.WriteLine($"Database not ready yet. Waiting 5 seconds. Error: {ex.GetType()}");
             Task.Delay(5000).Wait();
             continue;
           }
-          using (var reader = command.ExecuteReader())
-          {
-            while (reader.HasRows)
-            {
-              while (reader.Read())
-              {
+          using (var reader = command.ExecuteReader()) {
+            while (reader.HasRows) {
+              while (reader.Read()) {
                 var result = (int)reader.GetInt32(0);
-                if (result == 1)
-                {
+                if (result == 1) {
                   Console.WriteLine("Database is listening...");
                   dbReady = true;
                 }
@@ -278,20 +256,16 @@ namespace Faction.Core
     {
       bool dbLoaded = false;
       Console.WriteLine("Checking if Database is setup...");
-      using (var scope = host.Services.CreateScope())
-      {
+      using (var scope = host.Services.CreateScope()) {
         var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
-        while (!dbLoaded)
-        {
-          try
-          {
+        while (!dbLoaded) {
+          try {
             var language = dbContext.Language.CountAsync();
             language.Wait();
             dbLoaded = true;
             Console.WriteLine("Database is setup");
           }
-          catch (Exception exception)
-          {
+          catch (Exception exception) {
             Console.WriteLine($"Database not setup, waiting 5 seconds. Error: {exception.GetType()} - {exception.Message}");
             Task.Delay(5000).Wait();
           }
@@ -304,12 +278,10 @@ namespace Faction.Core
     {
       // the necessary default roles
       string[] roleNames = { "system", "admin", "operator", "readonly" };
-      foreach (string roleName in roleNames)
-      {
+      foreach (string roleName in roleNames) {
         // check if the role exists
         var existingRole = dbContext.UserRole.FirstOrDefault(r => r.Name.ToLower() == roleName);
-        if (existingRole == null)
-        {
+        if (existingRole == null) {
           // if not, create it
           var role = new UserRole
           {
@@ -319,8 +291,7 @@ namespace Faction.Core
           Console.WriteLine($"Saving role for {roleName}");
           dbContext.SaveChanges();
         }
-        else
-        {
+        else {
           Console.WriteLine($"Role already exists for {existingRole.Name}");
         }
       }
@@ -330,23 +301,19 @@ namespace Faction.Core
     {
       // loop over roles and see if env variables are set for those users
       var roles = dbContext.UserRole.ToList();
-      foreach (UserRole role in roles)
-      {
+      foreach (UserRole role in roles) {
         // create the env key (i.e. ADMIN_USERNAME, SYSTEM_USERNAME)
         string roleEnvPrefix = role.Name.ToUpper();
         string roleEnvUsernameKey = roleEnvPrefix + "_USERNAME";
         string username = Environment.GetEnvironmentVariable(roleEnvUsernameKey);
-        if (!String.IsNullOrEmpty(username))
-        {
+        if (!String.IsNullOrEmpty(username)) {
           // make sure there is a corresponding password set
           string roleEnvPasswordKey = roleEnvPrefix + "_PASSWORD";
           string password = Environment.GetEnvironmentVariable(roleEnvPasswordKey);
-          if (!String.IsNullOrEmpty(password))
-          {
+          if (!String.IsNullOrEmpty(password)) {
             // if the user already exists, just continue, otherwise create the user
             var existingUser = dbContext.User.FirstOrDefault(r => r.Username.ToLower() == username);
-            if (existingUser == null)
-            {
+            if (existingUser == null) {
               // HashPassword returns a string, convert it byte[]
               byte[] passwordHash = Encoding.UTF8.GetBytes(BCrypt.Net.BCrypt.HashPassword(password));
               var user = new User
@@ -361,18 +328,15 @@ namespace Faction.Core
               Console.WriteLine($"Saving {role.Name} user {user.Username}");
               dbContext.SaveChanges();
             }
-            else
-            {
+            else {
               Console.WriteLine($"The user {existingUser.Username} already exists. Skipping..");
             }
           }
-          else
-          {
+          else {
             Console.WriteLine($"No value found for {roleEnvPasswordKey}. Skipping...");
           }
         }
-        else
-        {
+        else {
           Console.WriteLine($"No value found for {roleEnvUsernameKey}. Skipping...");
         }
       }
@@ -391,16 +355,14 @@ namespace Faction.Core
     {
       // generate name (12 bytes) and secret (48 bytes)
       var existingApiKey = dbContext.ApiKey.FirstOrDefault();
-      if (existingApiKey == null)
-      {
+      if (existingApiKey == null) {
         var apiKeyName = GenerateUrlSafeSecret(12);
         var apiKeyToken = GenerateUrlSafeSecret(48);
         var apiKeyTokenHash = BCrypt.Net.BCrypt.HashPassword(apiKeyToken);
         var apiKeyBytes = Encoding.UTF8.GetBytes(apiKeyTokenHash);
         var defaultSystemUser = dbContext.User.FirstOrDefault(u => u.Role.Name.ToLower() == "system");
 
-        if (defaultSystemUser != null)
-        {
+        if (defaultSystemUser != null) {
           var apiKey = new ApiKey
           {
             Name = apiKeyName,
@@ -415,11 +377,9 @@ namespace Faction.Core
           dbContext.SaveChanges();
 
           string transportExternalAddress = Environment.GetEnvironmentVariable("EXTERNAL_ADDRESS");
-          if (!String.IsNullOrEmpty(transportExternalAddress))
-          {
+          if (!String.IsNullOrEmpty(transportExternalAddress)) {
             var existingTransport = dbContext.Transport.FirstOrDefault();
-            if (existingTransport == null)
-            {
+            if (existingTransport == null) {
               string transportName = "DIRECT Transport";
               string transportType = "DIRECT";
               string transportGUID = "0000-0000-0000-0000-0000";
@@ -445,23 +405,19 @@ namespace Faction.Core
               Console.WriteLine($"Saving new default transport {transport.Name}");
               dbContext.SaveChanges();
             }
-            else
-            {
+            else {
               Console.WriteLine("A transport already exists. Skipping creating default transport");
             }
           }
-          else
-          {
+          else {
             Console.WriteLine("No external address defined. Unable to create direct transport. Skipping");
           }
         }
-        else
-        {
+        else {
           Console.WriteLine("Unable to create API Key. No system user found. Skipping.");
         }
       }
-      else
-      {
+      else {
         Console.WriteLine("An ApiKey already exists. Skipping.");
       }
     }
@@ -472,11 +428,9 @@ namespace Faction.Core
       // check if auto seed is enabled
       string shouldAutoSeed = Environment.GetEnvironmentVariable("POSTGRES_AUTO_SEED") ?? "0";
       shouldAutoSeed = shouldAutoSeed.ToLower().Trim(trimQuotes);
-      if (shouldAutoSeed == "1" || shouldAutoSeed == "true")
-      {
+      if (shouldAutoSeed == "1" || shouldAutoSeed == "true") {
         Console.WriteLine("Seeding Database...");
-        using (var scope = host.Services.CreateScope())
-        {
+        using (var scope = host.Services.CreateScope()) {
           var dbContext = scope.ServiceProvider.GetService<FactionDbContext>();
           // first, seed the default roles
           AutoSeedRoles(dbContext);
