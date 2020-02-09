@@ -53,9 +53,9 @@ namespace Faction.Core
           {
             string assemblyName = typeof(FactionDbContext).Assembly.FullName;
             services.AddEntityFrameworkNpgsql().AddDbContext<FactionDbContext>(options =>
-                      options.UseNpgsql(connectionString,
-                      optionsBuilder => optionsBuilder.MigrationsAssembly(assemblyName))
-                  );
+                options.UseNpgsql(connectionString,
+                optionsBuilder => optionsBuilder.MigrationsAssembly(assemblyName))
+            );
 
             // Check to see if the database is listening and receptive to commands. 
             // does not check if database is configured/setup
@@ -89,7 +89,7 @@ namespace Faction.Core
       ConfirmDbSetup(host);
       AutoSeedDb(host);
 
-      Console.WriteLine("Starting faction server...");
+      Console.WriteLine("Starting Faction Core Server...");
       using (host) {
         host.Start();
       }
