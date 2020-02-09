@@ -36,6 +36,8 @@ RUN /opt/startup.sh restore $PUBLISH_ENABLED
 
 # copy and build everything else
 COPY . ./
+RUN rm -rf /app/{bin,obj}
+
 RUN chmod 777 ./wait-for-it.sh
 
 # publish if enabled
